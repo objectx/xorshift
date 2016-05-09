@@ -35,12 +35,18 @@ public:
      * Generates a random value.
      */
     uint64_t next () {
-        uint_fast64_t s1 = v_ [0] ;
-        const uint_fast64_t s0 = v_ [1] ;
-        v_ [0] = s0 ;
-        s1 ^= s1 << 23 ;
-        v_ [1] = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5) ;
-        return v_ [1] + s0 ;
+        asm 
+        const uint_fast64_t ax = v_ [0] ;
+        const uint_fast64_t dx = v_ [1] ;
+        auto bx = dx ;
+        auto cx = ax ;
+        cx ^= (ax << 23) ;
+        cx ^= (cx >> 18) ;
+        cx ^= dx ;
+        cx ^= (dx >> 5) ;
+        v_ [0] = bx ;
+        v_ [1] = cx ;
+        return bx + cx ;
     }
 
     /**
