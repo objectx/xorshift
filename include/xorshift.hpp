@@ -39,6 +39,7 @@ public:
         /* NO-OP */
     }
 #if XORSHIFT_LOCKFREE
+#if defined (_WIN32) || defined (_WIN64)
     uint64_t next () {
         while (true) {
             XORSHIFT_ALIGNMENT auto S = v_ ;
@@ -55,6 +56,36 @@ public:
             }
         }
     }
+#else   /* NOT (_WIN32 OR _WIN64) */
+    uint64_t next () __attribute__ ((noinline)){
+        uint64_t result ;
+        uint64_t *  s = v_.data () ;
+        __asm__ ("movq (%1), %%rax  \n"
+                 "movq 8(%1), %%rdx \n"
+                 "1:"
+                 "movq %%rdx, %%rbx \n"
+                 "movq %%rax, %%rcx \n"
+                 "movq %%rax, %%rsi \n"
+                 "shlq $23, %%rsi   \n"
+                 "xorq %%rsi, %%rcx \n"
+                 "movq %%rcx, %%rsi \n"
+                 "shrq $18, %%rsi   \n"
+                 "xorq %%rsi, %%rcx \n"
+                 "xorq %%rdx, %%rcx \n"
+                 "movq %%rdx, %%rsi \n"
+                 "shrq $5, %%rsi    \n"
+                 "xorq %%rsi, %%rcx \n"
+                 "lock; cmpxchg16b (%1)   \n"
+                 "jnz 1b    \n"
+                 "addq %%rcx, %%rbx \n"
+                 "movq %%rbx, %0    \n"
+                : "=r" (result)
+                : "r" (s)
+                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi") ;
+        return result ;
+    }
+#endif  /* NOT (_WIN32 OR _WIN64) */
+
 #else   /* ! XORSHIFT_LOCKFREE */
     /**
      * Generates a random value.
@@ -102,6 +133,7 @@ using xorshift128_state_t = std::array<uint64_t, 2> ;
 
 #if XORSHIFT_LOCKFREE
 
+#if defined (_WIN32) || defined (_WIN64)
 inline uint64_t next (xorshift128_state_t &state) {
     while (true) {
         XORSHIFT_ALIGNMENT auto S = state ;
@@ -118,6 +150,35 @@ inline uint64_t next (xorshift128_state_t &state) {
         }
     }
 }
+#else   /* NOT (_WIN32 OR _WIN64) */
+inline uint64_t next (xorshift128_state_t &state) {
+    uint64_t result ;
+    uint64_t *  s = state.data () ;
+    __asm__ ("movq (%1), %%rax  \n"
+             "movq 8(%1), %%rdx \n"
+             "1:"
+             "movq %%rdx, %%rbx \n"
+             "movq %%rax, %%rcx \n"
+             "movq %%rax, %%rsi \n"
+             "shlq $23, %%rsi   \n"
+             "xorq %%rsi, %%rcx \n"
+             "movq %%rcx, %%rsi \n"
+             "shrq $18, %%rsi   \n"
+             "xorq %%rsi, %%rcx \n"
+             "xorq %%rdx, %%rcx \n"
+             "movq %%rdx, %%rsi \n"
+             "shrq $5, %%rsi    \n"
+             "xorq %%rsi, %%rcx \n"
+             "lock; cmpxchg16b (%1)   \n"
+             "jnz 1b    \n"
+             "addq %%rcx, %%rbx \n"
+             "movq %%rbx, %0    \n"
+            : "=r" (result)
+            : "r" (s)
+            : "%rax", "%rbx", "%rcx", "%rdx", "%rsi") ;
+    return result ;
+}
+#endif  /* NOT (_WIN32 OR _WIN64) */
 
 #else   /* ! XORSHIFT_LOCKFRE */
 inline uint64_t next (xorshift128_state_t &state) {

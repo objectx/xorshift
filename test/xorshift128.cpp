@@ -66,6 +66,7 @@ TEST_CASE ("Test xorshift128") {
         for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
             auto expected = next () ;
             auto actual = rng.next () ;
+            CAPTURE (i) ;
             REQUIRE (expected == actual) ;
         }
     }
