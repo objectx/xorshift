@@ -12,10 +12,18 @@
 #include <array>
 #include <iterator>
 
+#define XORSHIFT_LOCKFREE   1
+
+#define XORSHIFT_ALIGNMENT  alignas (16)
+
+#if defined (_WIN32) || defined (_WIN64)
+#   include <intrin.h>
+#endif
+
 /**
  * XorShift128+ RNG.
  */
-class XorShift128 {
+class XORSHIFT_ALIGNMENT XorShift128 {
 private:
     std::array<uint64_t, 2> v_ ;
 public:
@@ -27,10 +35,27 @@ public:
         /* NO-OP */
     }
 
-    XorShift128 (const XorShift128 &src) : v_ { src.v_ } {
+    XorShift128 (const XorShift128 &src) : v_ (src.v_) {
         /* NO-OP */
     }
-
+#if XORSHIFT_LOCKFREE
+    uint64_t next () {
+        while (true) {
+            XORSHIFT_ALIGNMENT auto S = v_ ;
+            const uint_fast64_t ax = S [0] ;
+            const uint_fast64_t dx = S [1] ;
+            auto bx = dx ;
+            auto cx = ax ;
+            cx ^= (ax << 23) ;
+            cx ^= (cx >> 18) ;
+            cx ^= dx ;
+            cx ^= (dx >> 5) ;
+            if (_InterlockedCompareExchange128 ((volatile long long *)v_.data (), cx, bx, (long long *)S.data ()) != 0) {
+                return bx + cx ;
+            }
+        }
+    }
+#else   /* ! XORSHIFT_LOCKFREE */
     /**
      * Generates a random value.
      */
@@ -69,10 +94,32 @@ public:
         v_ [1] = s1 ;
         return *this ;
     }
+
+#endif  /* ! XORSHIFT_LOCKFREE */
 } ;
 
 using xorshift128_state_t = std::array<uint64_t, 2> ;
 
+#if XORSHIFT_LOCKFREE
+
+inline uint64_t next (xorshift128_state_t &state) {
+    while (true) {
+        XORSHIFT_ALIGNMENT auto S = state ;
+        const uint_fast64_t ax = S [0] ;
+        const uint_fast64_t dx = S [1] ;
+        auto bx = dx ;
+        auto cx = ax ;
+        cx ^= (ax << 23) ;
+        cx ^= (cx >> 18) ;
+        cx ^= dx ;
+        cx ^= (dx >> 5) ;
+        if (_InterlockedCompareExchange128 ((volatile long long *)state.data (), cx, bx, (long long *)S.data ()) != 0) {
+            return bx + cx ;
+        }
+    }
+}
+
+#else   /* ! XORSHIFT_LOCKFRE */
 inline uint64_t next (xorshift128_state_t &state) {
     uint_fast64_t s1 = state [0] ;
     const uint_fast64_t s0 = state [1] ;
@@ -105,5 +152,6 @@ inline xorshift128_state_t &    jump (xorshift128_state_t &state) {
     state [1] = s1 ;
     return state ;
 }
+#endif  /* XORSHIFT_LOCKFREE */
 
 #endif /* end of include guard: xorshift_hpp__b71b3a16_63c6_402e_881e_d6327a69180f */
