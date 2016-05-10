@@ -35,7 +35,6 @@ public:
      * Generates a random value.
      */
     uint64_t next () {
-        asm 
         const uint_fast64_t ax = v_ [0] ;
         const uint_fast64_t dx = v_ [1] ;
         auto bx = dx ;
