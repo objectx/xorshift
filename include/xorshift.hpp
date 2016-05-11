@@ -80,6 +80,49 @@ namespace XorShift {
         return result;
     }
 
+    inline state_t &    jump (state_t &state) {
+        uint_fast64_t s0 ;
+        uint_fast64_t s1 ;
+
+        auto update = [&s0, &s1](state_t &S, uint64_t mask) {
+            for (int_fast32_t b = 0 ; b < 64 ; ++b) {
+                auto v0 = S [0] ;
+                auto v1 = S [1] ;
+                if ((mask & (1ull << b)) != 0) {
+                    s0 ^= v0 ;
+                    s1 ^= v1 ;
+                }
+                next (S) ;
+            }
+        } ;
+        uint8_t done = 0 ;
+        do {
+            auto saved_state XORSHIFT_ALIGNMENT = state;
+            auto tmp_state XORSHIFT_ALIGNMENT = state;
+
+            s0 = 0;
+            s1 = 0;
+
+            update (tmp_state, 0x8a5cd789635d2dffull);
+            update (tmp_state, 0x121fd2155c472f96ull);
+            __asm__ ("leaq %1, %%rsi    \n"
+                     "movq (%%rsi), %%rax   \n"
+                     "movq 8(%%rsi), %%rdx  \n"
+                     "movq %5, %%rbx    \n"
+                     "movq %6, %%rcx    \n"
+                     "lock; cmpxchg16b %0   \n"
+                     "setz %2   \n"
+                    : "+m" (state[0])
+                    , "+m" (saved_state[0])
+                    , "=q" (done)
+                    , "+m" (state[1])
+                    , "+m" (saved_state[1])
+                    : "r" (s0), "r" (s1)
+                    : "%rax", "%rbx", "%rcx", "%rdx", "%rsi");
+        } while (! done) ;
+        return state ;
+    }
+
 #endif  /* NOT (_WIN32 OR _WIN64) */
 
 #else   /* ! XORSHIFT_LOCKFRE */

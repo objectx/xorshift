@@ -70,13 +70,13 @@ TEST_CASE ("Test lockfree-xorshift128") {
             REQUIRE (expected == actual) ;
         }
     }
-#if ! XORSHIFT_LOCKFREE
+
     SECTION ("Value should be equal after jump was called") {
         s [0] = 0 ;
         s [1] = 1 ;
 
         jump () ;
-        XorShift::state_t state { 0, 1 } ;
+        alignas (16) XorShift::state_t state { 0, 1 } ;
 
         XorShift::jump (state) ;
         for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
@@ -85,5 +85,5 @@ TEST_CASE ("Test lockfree-xorshift128") {
             REQUIRE (expected == actual) ;
         }
     }
-#endif
+
 }
