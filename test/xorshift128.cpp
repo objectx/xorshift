@@ -57,15 +57,15 @@ namespace {
     }
 }
 
-TEST_CASE ("Test xorshift128") {
+TEST_CASE ("Test lockfree-xorshift128") {
     SECTION ("Value should be equal to the reference implementation") {
         s [0] = 0 ;
         s [1] = 1 ;
-        XorShift128 rng {0, 1} ;
+        alignas (16) XorShift::state_t state { 0, 1 } ;
 
         for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
             auto expected = next () ;
-            auto actual = rng.next () ;
+            auto actual = XorShift::next (state) ;
             CAPTURE (i) ;
             REQUIRE (expected == actual) ;
         }
@@ -76,42 +76,12 @@ TEST_CASE ("Test xorshift128") {
         s [1] = 1 ;
 
         jump () ;
-        XorShift128 rng { 0, 1 } ;
+        XorShift::state_t state { 0, 1 } ;
 
-        rng.jump () ;
+        XorShift::jump (state) ;
         for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
             auto expected = next () ;
-            auto actual = rng.next () ;
-            REQUIRE (expected == actual) ;
-        }
-    }
-#endif
-}
-
-TEST_CASE ("Test lockfree-xorshift128") {
-    SECTION ("Value should be equal to the reference implementation") {
-        s [0] = 0 ;
-        s [1] = 1 ;
-        alignas (16) xorshift128_state_t state { 0, 1 } ;
-
-        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
-            auto expected = next () ;
-            auto actual = next (state) ;
-            REQUIRE (expected == actual) ;
-        }
-    }
-#if ! XORSHIFT_LOCKFREE
-    SECTION ("Value should be equal after jump was called") {
-        s [0] = 0 ;
-        s [1] = 1 ;
-
-        jump () ;
-        xorshift128_state_t state { 0, 1 } ;
-
-        jump (state) ;
-        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
-            auto expected = next () ;
-            auto actual = next (state) ;
+            auto actual = XorShift::next (state) ;
             REQUIRE (expected == actual) ;
         }
     }
