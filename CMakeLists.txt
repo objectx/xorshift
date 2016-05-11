@@ -21,7 +21,7 @@ enable_testing ()
 
 include (cotire OPTIONAL)
 
-set (XORSHIFT_HEADERS include/xorshift.hpp)
+set (XORSHIFT_HEADERS include/xorshift.hpp include/xoroshiro.hpp)
 
 add_subdirectory (test)
 
