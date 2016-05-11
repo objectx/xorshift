@@ -57,7 +57,7 @@ namespace {
     }
 }
 
-TEST_CASE ("Test lockfree-xorshift128") {
+TEST_CASE ("Test lockfree-xorshift128", "[xorshift]") {
     SECTION ("Value should be equal to the reference implementation") {
         s [0] = 0 ;
         s [1] = 1 ;
