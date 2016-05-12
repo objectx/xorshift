@@ -82,6 +82,23 @@ namespace XoRoShiRo {
         uint_fast64_t s1 ;
 
         auto update = [&s0, &s1](state_t &S, uint64_t mask) {
+            // Only considers locally copied state, thus no need to `atomic` ops.
+            auto do_next = [] (state_t &state) -> uint64_t {
+                const uint64_t s0 = state [0];
+                uint64_t s1 = state [1];
+                const uint64_t result = s0 + s1;
+
+                auto rotl = [](uint64_t v, int cnt) -> uint64_t {
+                    return (v << cnt) | (v >> (64 - cnt)) ;
+                } ;
+
+                s1 ^= s0;
+                state [0] = rotl (s0, 55) ^ s1 ^ (s1 << 14) ;
+                state [1] = rotl (s1, 36) ;
+
+                return result;
+            } ;
+
             for (int_fast32_t b = 0 ; b < 64 ; ++b) {
                 auto v0 = S [0] ;
                 auto v1 = S [1] ;
@@ -89,9 +106,10 @@ namespace XoRoShiRo {
                     s0 ^= v0 ;
                     s1 ^= v1 ;
                 }
-                next (S) ;
+                do_next (S) ;
             }
         } ;
+
         uint8_t done = 0 ;
         do {
             auto saved_state XOROSHIRO_ALIGNMENT = state;
