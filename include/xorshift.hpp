@@ -61,22 +61,22 @@ namespace XorShift {
                  "xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%=:   \n"
                  "movq %%rdx, %%rbx \n"
                  "movq %%rax, %%rcx \n"
-                 "movq %%rax, %%rsi \n"
-                 "shlq   $23, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
-                 "movq %%rcx, %%rsi \n"
-                 "shrq   $18, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
+                 "movq %%rax, %%r8  \n"
+                 "shlq   $23, %%r8  \n"
+                 "xorq  %%r8, %%rcx \n"
+                 "movq %%rcx, %%r8  \n"
+                 "shrq   $18, %%r8  \n"
+                 "xorq  %%r8, %%rcx \n"
                  "xorq %%rdx, %%rcx \n"
-                 "movq %%rdx, %%rsi \n"
-                 "shrq    $5, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
-                 "lock; cmpxchg16b %1   \n"
+                 "movq %%rdx, %%r8  \n"
+                 "shrq    $5, %%r8  \n"
+                 "xorq  %%r8, %%rcx \n"
+                 "lock; cmpxchg16b (%%rsi)  \n"
                  "jnz xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%= \n"
                  "leaq (%%rcx, %%rbx), %0\n"
                 : "=r" (result), "+m" (state [0]), "+m" (state [1])
                 : /* empty */
-                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi");
+                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
         return result;
     }
 
