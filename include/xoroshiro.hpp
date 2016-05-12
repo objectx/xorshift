@@ -18,7 +18,7 @@
  *
  * Note: Disables `jump` feature.
  */
-#define XOROSHIRO_LOCKFREE   0
+#define XOROSHIRO_LOCKFREE   1
 
 #define XOROSHIRO_ALIGNMENT  alignas (16)
 
@@ -33,6 +33,7 @@ namespace XoRoShiRo {
 
 #if defined (_WIN32) || defined (_WIN64)
     inline uint64_t next (state_t &state) {
+        assert (false, "Not yet implemented") ;
         while (true) {
             XOROSHIRO_ALIGNMENT auto S = state ;
             const uint_fast64_t ax = S [0] ;
@@ -51,32 +52,28 @@ namespace XoRoShiRo {
 #else   /* NOT (_WIN32 OR _WIN64) */
 
     inline uint64_t next (state_t &state) {
-        uint64_t result;
-        //uint64_t *s = state.data ();
-        // CMPXCHG16B requires destination was aligned to 16byte boundary.
-        assert ((reinterpret_cast<uintptr_t> (state.data ()) & 0xF) == 0) ;
-        __asm__ ("leaq %1, %%rsi\n"
-                 "movq (%%rsi), %%rax  \n"
-                 "movq 8(%%rsi), %%rdx \n"
-                 "xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%=:   \n"
-                 "movq %%rdx, %%rbx \n"
-                 "movq %%rax, %%rcx \n"
-                 "movq %%rax, %%rsi \n"
-                 "shlq   $23, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
-                 "movq %%rcx, %%rsi \n"
-                 "shrq   $18, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
-                 "xorq %%rdx, %%rcx \n"
-                 "movq %%rdx, %%rsi \n"
-                 "shrq    $5, %%rsi \n"
-                 "xorq %%rsi, %%rcx \n"
-                 "lock; cmpxchg16b %1   \n"
-                 "jnz xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%= \n"
-                 "leaq (%%rcx, %%rbx), %0\n"
+        uint64_t result ;
+
+        __asm__ ("leaq %1, %%rsi    \n"
+                 "movq  (%%rsi), %%rax  \n"
+                 "movq  8(%%rsi), %%rdx \n"
+                 "xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=:   \n"
+                 "movq  %%rax, %%rbx    \n"
+                 "movq  %%rdx, %%rcx    \n"
+                 "xorq  %%rbx, %%rcx    \n"
+                 "rorq  $9, %%rbx   \n"
+                 "xorq  %%rcx, %%rbx    \n"
+                 "movq  %%rcx, %%r8 \n"
+                 "shlq  $14, %%r8   \n"
+                 "xorq  %%r8, %%rbx \n"
+                 "rorq  $28, %%rcx  \n"
+                 "lock; cmpxchg16b (%%rsi)  \n"
+                 "jnz   xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=  \n"
+                 "leaq  (%%rax, %%rdx), %0  \n"
                 : "=r" (result), "+m" (state [0]), "+m" (state [1])
                 : /* empty */
-                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi");
+                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8"
+                ) ;
         return result;
     }
 
