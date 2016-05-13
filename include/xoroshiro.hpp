@@ -52,6 +52,9 @@ namespace XoRoShiRo {
 #else   /* NOT (_WIN32 OR _WIN64) */
 
     inline uint64_t next (state_t &state) {
+        // CMPXCHG16B requires destination was aligned to 16byte boundary.
+        assert ((reinterpret_cast<uintptr_t> (state.data ()) & 0xF) == 0) ;
+
         uint64_t result ;
 
         __asm__ ("leaq %1, %%rsi    \n"
