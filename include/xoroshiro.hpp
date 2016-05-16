@@ -33,22 +33,75 @@ namespace XoRoShiRo {
 
 #if defined (_WIN32) || defined (_WIN64)
     inline uint64_t next (state_t &state) {
-        assert (false, "Not yet implemented") ;
         while (true) {
             XOROSHIRO_ALIGNMENT auto S = state ;
-            const uint_fast64_t ax = S [0] ;
-            const uint_fast64_t dx = S [1] ;
-            auto bx = dx ;
-            auto cx = ax ;
-            cx ^= (ax << 23) ;
-            cx ^= (cx >> 18) ;
-            cx ^= dx ;
-            cx ^= (dx >> 5) ;
+            const uint64_t s0 = state [0];
+            uint64_t s1 = state [1];
+            const uint64_t result = s0 + s1;
+
+            auto rotl = [](uint64_t v, int cnt) -> uint64_t {
+                return (v << cnt) | (v >> (64 - cnt)) ;
+            } ;
+
+            s1 ^= s0;
+            uint64_t bx = rotl (s0, 55) ^ s1 ^ (s1 << 14) ;
+            uint64_t cx = rotl (s1, 36) ;
+
             if (_InterlockedCompareExchange128 ((volatile long long *)state.data (), cx, bx, (long long *)S.data ()) != 0) {
-                return bx + cx ;
+                return result ;
             }
         }
     }
+
+    inline state_t &    jump (state_t &state) {
+        uint_fast64_t s0 ;
+        uint_fast64_t s1 ;
+
+        auto update = [&s0, &s1](state_t &S, uint64_t mask) {
+            // Only considers locally copied state, thus no need to `atomic` ops.
+            auto do_next = [](state_t &state) -> uint64_t {
+                const uint64_t s0 = state [0];
+                uint64_t s1 = state [1];
+                const uint64_t result = s0 + s1;
+
+                auto rotl = [](uint64_t v, int cnt) -> uint64_t {
+                    return (v << cnt) | (v >> (64 - cnt)) ;
+                } ;
+
+                s1 ^= s0;
+                state [0] = rotl (s0, 55) ^ s1 ^ (s1 << 14) ;
+                state [1] = rotl (s1, 36) ;
+
+                return result;
+            } ;
+
+            for (int_fast32_t b = 0 ; b < 64 ; ++b) {
+                auto v0 = S [0] ;
+                auto v1 = S [1] ;
+                if ((mask & (1ull << b)) != 0) {
+                    s0 ^= v0 ;
+                    s1 ^= v1 ;
+                }
+                do_next (S) ;
+            }
+        } ;
+
+        while (true) {
+            auto saved_state XOROSHIRO_ALIGNMENT = state;
+            auto tmp_state XOROSHIRO_ALIGNMENT = state;
+
+            s0 = 0;
+            s1 = 0;
+
+            update (tmp_state, 0xBEAC0467EBA5FACBull) ;
+            update (tmp_state, 0xD86B048B86AA9922ull) ;
+            if (_InterlockedCompareExchange128 ((volatile long long *)state.data (), s1, s0, (long long *)saved_state.data ()) != 0) {
+                break ;
+            }
+        }
+        return state ;
+    }
+
 #else   /* NOT (_WIN32 OR _WIN64) */
 
     inline uint64_t next (state_t &state) {

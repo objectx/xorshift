@@ -48,6 +48,52 @@ namespace XorShift {
             }
         }
     }
+
+    inline state_t &    jump (state_t &state) {
+        uint_fast64_t s0 ;
+        uint_fast64_t s1 ;
+
+        auto update = [&s0, &s1](state_t &S, uint64_t mask) {
+            // Update only locally copied state, thus no atomic ops. neeed.
+            auto do_next = [](state_t &state) {
+                uint_fast64_t s1 = state [0] ;
+                const uint_fast64_t s0 = state [1] ;
+                uint64_t v0 = s0 ;
+                s1 ^= s1 << 23 ;
+                uint64_t v1 = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5) ;
+                state [0] = v0 ;
+                state [1] = v1 ;
+                return v1 + s0 ;
+            } ;
+
+            for (int_fast32_t b = 0 ; b < 64 ; ++b) {
+                auto v0 = S [0] ;
+                auto v1 = S [1] ;
+                if ((mask & (1ull << b)) != 0) {
+                    s0 ^= v0 ;
+                    s1 ^= v1 ;
+                }
+                do_next (S) ;
+            }
+        } ;
+
+        while (true) {
+            auto saved_state XORSHIFT_ALIGNMENT = state;
+            auto tmp_state XORSHIFT_ALIGNMENT = state;
+
+            s0 = 0;
+            s1 = 0;
+
+            update (tmp_state, 0x8a5cd789635d2dffull);
+            update (tmp_state, 0x121fd2155c472f96ull);
+
+            if (_InterlockedCompareExchange128 ((volatile long long *)state.data (), s1, s0, (long long *)saved_state.data ()) != 0) {
+                break ;
+            }
+        }
+        return state ;
+    }
+
 #else   /* NOT (_WIN32 OR _WIN64) */
 
     inline uint64_t next (state_t &state) {
