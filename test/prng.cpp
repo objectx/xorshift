@@ -9,15 +9,16 @@
 
 namespace {
 
-    XoRoShiRo::state_t  state { 0, 1 } ;
+    XOROSHIRO_ALIGNMENT XoRoShiRo::state_t  state { 0, 1 } ;
 
     template <typename T_>
         typename std::enable_if<std::is_integral<T_>::value, T_>::type    random () {
-            using uval_t = std::make_unsigned<T_>::type ;
+            using uval_t = typename std::make_unsigned<T_>::type ;
 
             auto v = XoRoShiRo::next (state) ;
 
-            static_assert (sizeof (T_) == 8 || sizeof (T_) == 4 || sizeof (T_) == 2 || sizeof (T_) == 1, "Bad integral type supplied.") ;
+            static_assert (sizeof (T_) == 8 || sizeof (T_) == 4 || sizeof (T_) == 2 || sizeof (T_) == 1
+                          , "Bad integral type supplied.") ;
             switch (sizeof (T_)) {
             case 8:
                 return (T_)v ;
@@ -45,9 +46,7 @@ namespace {
         }
 
     template <typename T_>
-        typename std::enable_if<std::is_floating_point<T_>::value, T_>::type    random () {
-            static_assert (false, "Unexpected type supplied.") ;
-        }
+        typename std::enable_if<std::is_floating_point<T_>::value, T_>::type    random () ;
 
     template <>
         float random<float> () {
