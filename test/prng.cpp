@@ -17,7 +17,10 @@ namespace {
 
             auto v = XoRoShiRo::next (state) ;
 
-            static_assert (sizeof (T_) == 8 || sizeof (T_) == 4 || sizeof (T_) == 2 || sizeof (T_) == 1
+            static_assert ((  sizeof (T_) == 8
+                           || sizeof (T_) == 4
+                           || sizeof (T_) == 2
+                           || sizeof (T_) == 1)
                           , "Bad integral type supplied.") ;
             switch (sizeof (T_)) {
             case 8:
@@ -45,6 +48,9 @@ namespace {
             }
         }
 
+    /**
+     * Traps unknown floating point type.
+     */
     template <typename T_>
         typename std::enable_if<std::is_floating_point<T_>::value, T_>::type    random () ;
 
