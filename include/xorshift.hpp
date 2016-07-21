@@ -15,10 +15,24 @@
 
 /**
  * Enables lock-free version of xorshift128 PRNG.
- *
- * Note: Disables `jump` feature.
  */
-#define XORSHIFT_LOCKFREE   1
+#ifndef XORSHIFT_LOCKFREE
+#   if __x86_64__
+#       if 3 < __clang_major__
+#           define XORSHIFT_LOCKFREE   1
+#       else    /* __clang_major__ <=3 */
+#           if 6 < __clang_minor__
+#               define XORSHIFT_LOCKFREE   1
+#           endif
+#       endif   /* __clang_major__ <=3 */
+#   elif defined (_WIN64)
+#       define XORSHIFT_LOCKFREE   1
+#   endif
+#endif
+
+#ifndef XORSHIFT_LOCKFREE
+#   define XORSHIFT_LOCKFREE   0   /* Use generic version */
+#endif
 
 #define XORSHIFT_ALIGNMENT  alignas (16)
 
@@ -183,7 +197,7 @@ namespace XorShift {
 
 #endif  /* NOT (_WIN32 OR _WIN64) */
 
-#else   /* ! XORSHIFT_LOCKFRE */
+#else   /* ! XORSHIFT_LOCKFREE */
 
     inline uint64_t next (state_t &state) {
         uint_fast64_t s1 = state [0] ;

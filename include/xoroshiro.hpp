@@ -15,10 +15,24 @@
 
 /**
  * Enables lock-free version of xoroshiro128 PRNG.
- *
- * Note: Disables `jump` feature.
  */
-#define XOROSHIRO_LOCKFREE   1
+#ifndef XOROSHIRO_LOCKFREE
+#   if __x86_64__
+#       if 3 < __clang_major__
+#           define XOROSHIRO_LOCKFREE   1
+#       else    /* __clang_major__ <=3 */
+#           if 6 < __clang_minor__
+#               define XOROSHIRO_LOCKFREE   1
+#           endif
+#       endif   /* __clang_major__ <=3 */
+#   elif defined (_WIN64)
+#       define XOROSHIRO_LOCKFREE   1
+#   endif
+#endif
+
+#ifndef XOROSHIRO_LOCKFREE
+#   define XOROSHIRO_LOCKFREE   0   /* Use generic version */
+#endif
 
 #define XOROSHIRO_ALIGNMENT  alignas (16)
 
@@ -196,7 +210,7 @@ namespace XoRoShiRo {
 
 #endif  /* NOT (_WIN32 OR _WIN64) */
 
-#else   /* ! XOROSHIRO_LOCKFRE */
+#else   /* ! XOROSHIRO_LOCKFREE */
 
     inline uint64_t next (state_t &state) {
         const uint64_t s0 = state [0];
