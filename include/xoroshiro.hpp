@@ -190,20 +190,21 @@ namespace XoRoShiRo {
 
             update (tmp_state, 0xBEAC0467EBA5FACBull) ;
             update (tmp_state, 0xD86B048B86AA9922ull) ;
-            __asm__ ("leaq %1, %%rsi    \n"
-                     "movq (%%rsi), %%rax   \n"
-                     "movq 8(%%rsi), %%rdx  \n"
-                     "movq %5, %%rbx    \n"
-                     "movq %6, %%rcx    \n"
-                     "lock; cmpxchg16b %0   \n"
-                     "setz %2   \n"
+            __asm__ ("leaq  %0, %%r8        \n"
+                     "leaq  %1, %%rsi       \n"
+                     "movq   (%%rsi), %%rax \n"
+                     "movq  8(%%rsi), %%rdx \n"
+                     "movq  %5, %%rbx       \n"
+                     "movq  %6, %%rcx       \n"
+                     "lock; cmpxchg16b (%%r8)   \n"
+                     "setz  %2  \n"
                     : "+m" (state[0])
                     , "+m" (saved_state[0])
                     , "=q" (done)
                     , "+m" (state[1])
                     , "+m" (saved_state[1])
                     : "r" (s0), "r" (s1)
-                    : "%rax", "%rbx", "%rcx", "%rdx", "%rsi");
+                    : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
         } while (! done) ;
         return state ;
     }
