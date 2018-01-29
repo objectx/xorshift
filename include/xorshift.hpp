@@ -225,7 +225,7 @@ namespace XorShift {
                     s0 ^= v0 ;
                     s1 ^= v1 ;
                 }
-                next (S) ;
+                unsafe_next (S) ;
             }
         } ;
         update (state, 0x8a5cd789635d2dffull) ;

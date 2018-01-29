@@ -240,7 +240,7 @@ namespace XoRoShiRo {
                     s0 ^= v0 ;
                     s1 ^= v1 ;
                 }
-                next (S) ;
+                unsafe_next (S) ;
             }
         } ;
         update (state, 0xBEAC0467EBA5FACBull) ;
