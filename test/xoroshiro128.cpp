@@ -104,3 +104,33 @@ TEST_CASE ("Test lockfree-xoroshiro128", "[xoroshiro]") {
     }
 
 }
+
+TEST_CASE ("Test thread agnostic xoroshiro128", "[xoroshiro]") {
+    SECTION ("Value should be equal to the reference implementation") {
+        s [0] = 0 ;
+        s [1] = 1 ;
+        alignas (16) XoRoShiRo::state_t state { 0, 1 } ;
+
+        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
+            auto expected = next () ;
+            auto actual = XoRoShiRo::unsafe_next (state) ;
+            CAPTURE (i) ;
+            REQUIRE (expected == actual) ;
+        }
+    }
+
+    SECTION ("Value should be equal after jump was called") {
+        s [0] = 0 ;
+        s [1] = 1 ;
+
+        jump () ;
+        alignas (16) XoRoShiRo::state_t state { 0, 1 } ;
+
+        XoRoShiRo::unsafe_jump (state) ;
+        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
+            auto expected = next () ;
+            auto actual = XoRoShiRo::unsafe_next (state) ;
+            REQUIRE (expected == actual) ;
+        }
+    }
+}

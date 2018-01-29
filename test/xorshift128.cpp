@@ -85,5 +85,35 @@ TEST_CASE ("Test lockfree-xorshift128", "[xorshift]") {
             REQUIRE (expected == actual) ;
         }
     }
-
 }
+
+TEST_CASE ("Test lock agnositic xorshift128", "[xorshift]") {
+    SECTION ("Value should be equal to the reference implementation") {
+        s [0] = 0 ;
+        s [1] = 1 ;
+        alignas (16) XorShift::state_t state { 0, 1 } ;
+
+        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
+            auto expected = next () ;
+            auto actual = XorShift::unsafe_next (state) ;
+            CAPTURE (i) ;
+            REQUIRE (expected == actual) ;
+        }
+    }
+
+    SECTION ("Value should be equal after jump was called") {
+        s [0] = 0 ;
+        s [1] = 1 ;
+
+        jump () ;
+        alignas (16) XorShift::state_t state { 0, 1 } ;
+
+        XorShift::unsafe_jump (state) ;
+        for (int_fast32_t i = 0 ; i < 10000 ; ++i) {
+            auto expected = next () ;
+            auto actual = XorShift::unsafe_next (state) ;
+            REQUIRE (expected == actual) ;
+        }
+    }
+}
+

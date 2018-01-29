@@ -1,7 +1,7 @@
 /**
  * xorshift.hpp: XorShift pseudo random number generator.
  *
- * Copyright (c) 2016 Masashi Fujita
+ * Copyright (c) 2016-2018 Masashi Fujita
  */
 #pragma once
 #ifndef xorshift_hpp__b71b3a16_63c6_402e_881e_d6327a69180f
@@ -31,7 +31,7 @@
 #endif
 
 #ifndef XORSHIFT_LOCKFREE
-#   define XORSHIFT_LOCKFREE   0   /* Use generic version */
+#   define XORSHIFT_LOCKFREE   0   /* Disables lock-free versions.  */
 #endif
 
 #define XORSHIFT_ALIGNMENT  alignas (16)
@@ -115,28 +115,28 @@ namespace XorShift {
         //uint64_t *s = state.data ();
         // CMPXCHG16B requires destination was aligned to 16byte boundary.
         assert ((reinterpret_cast<uintptr_t> (state.data ()) & 0xF) == 0) ;
-        __asm__ ("leaq %1, %%rsi\n"
-                 "movq (%%rsi), %%rax  \n"
-                 "movq 8(%%rsi), %%rdx \n"
-                 "xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%=:   \n"
-                 "movq %%rdx, %%rbx \n"
-                 "movq %%rax, %%rcx \n"
-                 "movq %%rax, %%r8  \n"
-                 "shlq   $23, %%r8  \n"
-                 "xorq  %%r8, %%rcx \n"
-                 "movq %%rcx, %%r8  \n"
-                 "shrq   $18, %%r8  \n"
-                 "xorq  %%r8, %%rcx \n"
-                 "xorq %%rdx, %%rcx \n"
-                 "movq %%rdx, %%r8  \n"
-                 "shrq    $5, %%r8  \n"
-                 "xorq  %%r8, %%rcx \n"
-                 "lock; cmpxchg16b (%%rsi)  \n"
-                 "jnz xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%= \n"
-                 "leaq (%%rcx, %%rbx), %0\n"
-                : "=r" (result), "+m" (state [0]), "+m" (state [1])
-                : /* empty */
-                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
+        __asm__ __volatile__ ("leaq %1, %%rsi\n"
+                              "movq (%%rsi), %%rax  \n"
+                              "movq 8(%%rsi), %%rdx \n"
+                              "xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%=:   \n"
+                              "movq %%rdx, %%rbx \n"
+                              "movq %%rax, %%rcx \n"
+                              "movq %%rax, %%r8  \n"
+                              "shlq   $23, %%r8  \n"
+                              "xorq  %%r8, %%rcx \n"
+                              "movq %%rcx, %%r8  \n"
+                              "shrq   $18, %%r8  \n"
+                              "xorq  %%r8, %%rcx \n"
+                              "xorq %%rdx, %%rcx \n"
+                              "movq %%rdx, %%r8  \n"
+                              "shrq    $5, %%r8  \n"
+                              "xorq  %%r8, %%rcx \n"
+                              "lock; cmpxchg16b (%%rsi)  \n"
+                              "jnz xorshift_retry_EFF4AF5C_2F3E_4D8F_9DAE_9D1CFD6444B9_%= \n"
+                              "leaq (%%rcx, %%rbx), %0\n"
+                             : "=r" (result), "+m" (state [0]), "+m" (state [1])
+                             : /* empty */
+                             : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
         return result;
     }
 
@@ -177,30 +177,31 @@ namespace XorShift {
 
             update (tmp_state, 0x8a5cd789635d2dffull);
             update (tmp_state, 0x121fd2155c472f96ull);
-            __asm__ ("leaq  %0, %%r8    \n"
-                     "leaq  %1, %%rsi   \n"
-                     "movq   (%%rsi), %%rax \n"
-                     "movq  8(%%rsi), %%rdx \n"
-                     "movq  %5, %%rbx       \n"
-                     "movq  %6, %%rcx       \n"
-                     "lock; cmpxchg16b (%%r8)   \n"
-                     "setz  %2  \n"
-                    : "+m" (state[0])
-                    , "+m" (saved_state[0])
-                    , "=q" (done)
-                    , "+m" (state[1])
-                    , "+m" (saved_state[1])
-                    : "r" (s0), "r" (s1)
-                    : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
+            __asm__ __volatile__ ("leaq  %0, %%r8    \n"
+                                  "leaq  %1, %%rsi   \n"
+                                  "movq   (%%rsi), %%rax \n"
+                                  "movq  8(%%rsi), %%rdx \n"
+                                  "movq  %5, %%rbx       \n"
+                                  "movq  %6, %%rcx       \n"
+                                  "lock; cmpxchg16b (%%r8)   \n"
+                                  "setz  %2  \n"
+                                 : "+m" (state[0])
+                                 , "+m" (saved_state[0])
+                                 , "=q" (done)
+                                 , "+m" (state[1])
+                                 , "+m" (saved_state[1])
+                                 : "r" (s0), "r" (s1)
+                                 : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
         } while (! done) ;
         return state ;
     }
 
 #endif  /* NOT (_WIN32 OR _WIN64) */
 
-#else   /* ! XORSHIFT_LOCKFREE */
+#endif  /* ! XORSHIFT_LOCKFREE */
 
-    inline uint64_t next (state_t &state) {
+    /// Thread agnostic version of `XorShift::next`.
+    inline uint64_t unsafe_next (state_t &state) {
         uint_fast64_t s1 = state [0] ;
         const uint_fast64_t s0 = state [1] ;
         uint64_t v0 = s0 ;
@@ -211,7 +212,8 @@ namespace XorShift {
         return v1 + s0 ;
     }
 
-    inline state_t &    jump (state_t &state) {
+    /// Thread agnositic version of `XorShift::jump`.
+    inline state_t &    unsafe_jump (state_t &state) {
         uint_fast64_t s0 = 0 ;
         uint_fast64_t s1 = 0 ;
 
@@ -232,8 +234,6 @@ namespace XorShift {
         state [1] = s1 ;
         return state ;
     }
-#endif  /* ! XORSHIFT_LOCKFREE */
-
 }
 
 #endif /* end of include guard: xorshift_hpp__b71b3a16_63c6_402e_881e_d6327a69180f */

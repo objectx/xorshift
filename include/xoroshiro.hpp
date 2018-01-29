@@ -1,7 +1,7 @@
 /**
  * xoroshiro.hpp: Xor-Rotate-Shift-Rotate pseudo random number generator.
  *
- * Copyright (c) 2016 Masashi Fujita
+ * Copyright (c) 2016-2018 Masashi Fujita
  */
 #pragma once
 #ifndef xoroshiro_hpp__49459923_F87B_46C7_8993_77E9E9A88574
@@ -124,26 +124,25 @@ namespace XoRoShiRo {
 
         uint64_t result ;
 
-        __asm__ ("leaq  %1, %%rsi       \n"
-                 "movq  (%%rsi), %%rax  \n"
-                 "movq  8(%%rsi), %%rdx \n"
-                 "xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=:   \n"
-                 "movq  %%rax, %%rbx    \n"
-                 "movq  %%rdx, %%rcx    \n"
-                 "xorq  %%rbx, %%rcx    \n"
-                 "rorq     $9, %%rbx    \n"
-                 "xorq  %%rcx, %%rbx    \n"
-                 "movq  %%rcx, %%r8     \n"
-                 "shlq    $14, %%r8     \n"
-                 "xorq   %%r8, %%rbx    \n"
-                 "rorq    $28, %%rcx    \n"
-                 "lock; cmpxchg16b (%%rsi)  \n"
-                 "jnz   xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=  \n"
-                 "leaq  (%%rax, %%rdx), %0  \n"
-                : "=r" (result), "+m" (state [0]), "+m" (state [1])
-                : /* empty */
-                : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8"
-                ) ;
+        __asm__ __volatile__ ("leaq  %1, %%rsi       \n"
+                              "movq  (%%rsi), %%rax  \n"
+                              "movq  8(%%rsi), %%rdx \n"
+                              "xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=:   \n"
+                              "movq  %%rax, %%rbx    \n"
+                              "movq  %%rdx, %%rcx    \n"
+                              "xorq  %%rbx, %%rcx    \n"
+                              "rorq     $9, %%rbx    \n"
+                              "xorq  %%rcx, %%rbx    \n"
+                              "movq  %%rcx, %%r8     \n"
+                              "shlq    $14, %%r8     \n"
+                              "xorq   %%r8, %%rbx    \n"
+                              "rorq    $28, %%rcx    \n"
+                              "lock; cmpxchg16b (%%rsi)  \n"
+                              "jnz   xoroshiro_retry_A80A9D36_6F9F_47A5_81F0_AD2A6F86F6D5_%=  \n"
+                              "leaq  (%%rax, %%rdx), %0  \n"
+                             : "=r" (result), "+m" (state [0]), "+m" (state [1])
+                             : /* empty */
+                             : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8") ;
         return result;
     }
 
@@ -190,30 +189,30 @@ namespace XoRoShiRo {
 
             update (tmp_state, 0xBEAC0467EBA5FACBull) ;
             update (tmp_state, 0xD86B048B86AA9922ull) ;
-            __asm__ ("leaq  %0, %%r8        \n"
-                     "leaq  %1, %%rsi       \n"
-                     "movq   (%%rsi), %%rax \n"
-                     "movq  8(%%rsi), %%rdx \n"
-                     "movq  %5, %%rbx       \n"
-                     "movq  %6, %%rcx       \n"
-                     "lock; cmpxchg16b (%%r8)   \n"
-                     "setz  %2  \n"
-                    : "+m" (state[0])
-                    , "+m" (saved_state[0])
-                    , "=q" (done)
-                    , "+m" (state[1])
-                    , "+m" (saved_state[1])
-                    : "r" (s0), "r" (s1)
-                    : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
+            __asm__ __volatile__ ("leaq  %0, %%r8        \n"
+                                  "leaq  %1, %%rsi       \n"
+                                  "movq   (%%rsi), %%rax \n"
+                                  "movq  8(%%rsi), %%rdx \n"
+                                  "movq  %5, %%rbx       \n"
+                                  "movq  %6, %%rcx       \n"
+                                  "lock; cmpxchg16b (%%r8)   \n"
+                                  "setz  %2  \n"
+                                 : "+m" (state[0])
+                                 , "+m" (saved_state[0])
+                                 , "=q" (done)
+                                 , "+m" (state[1])
+                                 , "+m" (saved_state[1])
+                                 : "r" (s0), "r" (s1)
+                                 : "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%r8");
         } while (! done) ;
         return state ;
     }
 
 #endif  /* NOT (_WIN32 OR _WIN64) */
 
-#else   /* ! XOROSHIRO_LOCKFREE */
+#endif  /* ! XOROSHIRO_LOCKFREE */
 
-    inline uint64_t next (state_t &state) {
+    inline uint64_t unsafe_next (state_t &state) {
         const uint64_t s0 = state [0];
         uint64_t s1 = state [1];
         const uint64_t result = s0 + s1;
@@ -229,7 +228,7 @@ namespace XoRoShiRo {
         return result;
     }
 
-    inline state_t &    jump (state_t &state) {
+    inline state_t &    unsafe_jump (state_t &state) {
         uint_fast64_t s0 = 0 ;
         uint_fast64_t s1 = 0 ;
 
@@ -250,8 +249,6 @@ namespace XoRoShiRo {
         state [1] = s1 ;
         return state ;
     }
-#endif  /* ! XOROSHIRO_LOCKFREE */
-
 }
 
 #endif /* xoroshiro_hpp__49459923_F87B_46C7_8993_77E9E9A88574 */
