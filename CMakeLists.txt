@@ -24,6 +24,7 @@ include (cotire OPTIONAL)
 set (XORSHIFT_HEADERS include/xorshift.hpp include/xoroshiro.hpp)
 
 add_subdirectory (test)
+add_subdirectory (include)
 
 add_library (xorshift INTERFACE)
     target_compile_features (xorshift INTERFACE cxx_range_for)
